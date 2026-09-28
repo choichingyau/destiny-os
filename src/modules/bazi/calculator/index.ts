@@ -1,0 +1,8 @@
+import { Solar } from 'lunar-typescript';
+import type { BaziChart, BaziInput, Pillar } from '../types';
+const elements = ['木', '火', '土', '金', '水'];
+const stemElements: Record<string, string> = { 甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水' };
+const branchElements: Record<string, string> = { 子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水' };
+const yang = new Set(['甲','丙','戊','庚','壬']);
+function pillar(stem: string, branch: string): Pillar { return { stem, branch, stemElement: stemElements[stem] ?? '未知', branchElement: branchElements[branch] ?? '未知', yinYang: yang.has(stem) ? '阳' : '阴', tenGod: '待按日主计算', hiddenStems: [], naYin: '待补充' }; }
+export function calculateBazi(input: BaziInput): BaziChart { const [y,m,d] = input.date.split('-').map(Number); const [h,mi] = (input.time ?? '12:00').split(':').map(Number); const solar = Solar.fromYmdHms(y,m,d,h,mi,0); const lunar = solar.getLunar(); const eight = lunar.getEightChar(); const ps = { year: pillar(eight.getYearGan(), eight.getYearZhi()), month: pillar(eight.getMonthGan(), eight.getMonthZhi()), day: pillar(eight.getDayGan(), eight.getDayZhi()), hour: input.unknownTime ? null : pillar(eight.getTimeGan(), eight.getTimeZhi()) }; const counts = Object.fromEntries(elements.map(e => [e, Object.values(ps).filter(Boolean).flatMap(p => [p!.stemElement,p!.branchElement]).filter(x => x === e).length])); return { engine: 'lunar-typescript', calculatedAt: new Date().toISOString(), inputLocalTime: `${input.date}T${input.time ?? '12:00'}`, pillars: ps, solarTerm: lunar.getJieQi(), lunarDate: `${lunar.getYear()}年${lunar.getMonth()}月${lunar.getDay()}日`, elementCounts: counts, unknownBirthTime: Boolean(input.unknownTime) }; }

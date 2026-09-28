@@ -1,0 +1,1 @@
+export type DivinationSystem<TInput = unknown, TResult = unknown> = { id: string; name: string; requiredInputs: string[]; calculate(input: TInput): TResult; getRuleMatches(result: TResult): unknown[]; formatForAI(result: TResult): Record<string, unknown> };

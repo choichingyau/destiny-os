@@ -1,0 +1,20 @@
+create table if not exists profiles (id uuid primary key references auth.users(id) on delete cascade, nickname text, created_at timestamptz default now());
+create table if not exists birth_profiles (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, profile_id uuid references profiles(id) on delete cascade, original_input_time text not null, local_time text, utc_time timestamptz, timezone text, latitude numeric, longitude numeric, dst boolean, use_true_solar_time boolean default false, corrected_time text, created_at timestamptz default now());
+create table if not exists charts (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, birth_profile_id uuid references birth_profiles(id) on delete cascade, system_id text not null, engine text not null, created_at timestamptz default now());
+create table if not exists chart_results (id uuid primary key default gen_random_uuid(), chart_id uuid not null references charts(id) on delete cascade, result jsonb not null, created_at timestamptz default now());
+create table if not exists readings (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, question text, input jsonb not null, created_at timestamptz default now());
+create table if not exists reports (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, reading_id uuid references readings(id) on delete cascade, report jsonb not null, created_at timestamptz default now());
+create table if not exists life_events (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, occurred_at date, title text, details text, created_at timestamptz default now());
+create table if not exists birth_time_candidates (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, birth_profile_id uuid references birth_profiles(id) on delete cascade, label text, score numeric, evidence jsonb, created_at timestamptz default now());
+create table if not exists feedback (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete set null, report_id uuid references reports(id) on delete set null, rating int, comment text, created_at timestamptz default now());
+
+alter table profiles enable row level security; alter table birth_profiles enable row level security; alter table charts enable row level security; alter table chart_results enable row level security; alter table readings enable row level security; alter table reports enable row level security; alter table life_events enable row level security; alter table birth_time_candidates enable row level security; alter table feedback enable row level security;
+create policy "own profiles" on profiles for all using (id = auth.uid()) with check (id = auth.uid());
+create policy "own birth profiles" on birth_profiles for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own charts" on charts for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own chart results" on chart_results for all using (exists (select 1 from charts where charts.id = chart_results.chart_id and charts.user_id = auth.uid()));
+create policy "own readings" on readings for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own reports" on reports for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own life events" on life_events for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own candidates" on birth_time_candidates for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own feedback" on feedback for all using (user_id = auth.uid()) with check (user_id = auth.uid());
